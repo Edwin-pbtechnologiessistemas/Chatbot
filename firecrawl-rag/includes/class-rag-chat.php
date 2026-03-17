@@ -22,20 +22,66 @@ class RAG_Chat {
         $question_lower = trim($question_lower);
         
         // =============================================
-        // DETECCIÓN DE SALUDOS
+        // RESPUESTAS PROGRAMADAS (ALTA PRIORIDAD)
         // =============================================
         
+        // SALUDOS
         $saludos = ['hola', 'buenas', 'buenos dias', 'buenos días', 'buenas tardes', 'buenas noches', 'hey', 'hi', 'hello'];
         foreach ($saludos as $saludo) {
-            if (strpos($question_lower, $saludo) !== false) {
+            if (strpos($question_lower, $saludo) !== false && strlen($question_lower) < 20) {
                 return "🤖 **PBTechnologies**\n\n" .
                        "¡Hola! Soy el asistente virtual. ¿En qué puedo ayudarte?\n\n" .
                        "**Puedes preguntarme sobre:**\n" .
+                       "• **La empresa** (quienes son, que ofrecen, servicios)\n" .
                        "• **Productos** específicos (ej: 'multimetro sonel cmm 60')\n" .
                        "• **Marcas** (FOTRIC, SONEL, HOBO, TROTEC, RIGEL)\n" .
                        "• **Categorías** (cámaras termográficas, pinzas amperimétricas)\n" .
-                       "• **Ubicación** y **contacto**\n\n" .
-                       "¿Qué te gustaría saber?";
+                       "• **Ubicación** y **contacto**";
+            }
+        }
+        
+        // SERVICIOS - DETECCIÓN ESPECÍFICA
+        $servicios = [
+            'servicios', 'servicio', 'que servicios', 'qué servicios',
+            'que ofrecen', 'qué ofrecen', 'que hacen', 'qué hacen',
+            'calibracion', 'calibración', 'soporte', 'tecnico', 'técnico',
+            'mantenimiento', 'reparacion', 'reparación', 'asesoria', 'asesoría',
+            'consulta', 'consultas', 'ayuda', 'asistencia'
+        ];
+        
+        foreach ($servicios as $palabra) {
+            if (strpos($question_lower, $palabra) !== false) {
+                return $this->respuesta_servicios();
+            }
+        }
+        
+        // QUIÉNES SOMOS / EMPRESA
+        $quienes_somos = [
+            'quienes son', 'quiénes son', 'quienes somos', 'quiénes somos',
+            'que es pbtechnologi', 'qué es pbtechnologi', 'que es pbtechnologies',
+            'que son', 'qué son', 'que hacen', 'qué hacen',
+            'empresa', 'nosotros', 'acerca de', 'sobre ustedes', 'pbtechnologies'
+        ];
+        
+        foreach ($quienes_somos as $frase) {
+            if (strpos($question_lower, $frase) !== false) {
+                return $this->respuesta_empresa();
+            }
+        }
+        
+        // UBICACIÓN
+        $ubicacion = ['ubicacion', 'ubicación', 'donde', 'dónde', 'direccion', 'dirección', 'encuentran', 'estan', 'están'];
+        foreach ($ubicacion as $palabra) {
+            if (strpos($question_lower, $palabra) !== false) {
+                return $this->respuesta_ubicacion();
+            }
+        }
+        
+        // CONTACTO
+        $contacto = ['contacto', 'telefono', 'teléfono', 'whatsapp', 'email', 'correo', 'celular', 'llamar'];
+        foreach ($contacto as $palabra) {
+            if (strpos($question_lower, $palabra) !== false) {
+                return $this->respuesta_contacto();
             }
         }
         
@@ -58,68 +104,6 @@ class RAG_Chat {
         }
         
         // =============================================
-        // DETECCIÓN DE CATEGORÍAS (eléctrico, temperatura, pinzas, etc)
-        // =============================================
-        
-        $categorias = [
-            'electrico' => ['eléctrico', 'electrico', 'electricos', 'eléctricos', 'medicion electrica', 'parametros electricos'],
-            'temperatura' => ['temperatura', 'termico', 'termica', 'termográfico', 'termografica', 'calor'],
-            'pinzas' => ['pinza', 'pinzas', 'amperimetrica', 'amperimetricas'],
-            'presion' => ['presión', 'presion', 'presiones'],
-            'humedad' => ['humedad', 'humedad relativa', 'hr'],
-            'gas' => ['gas', 'gases', 'detector de gas'],
-            'vibracion' => ['vibración', 'vibracion', 'vibraciones'],
-            'distancia' => ['distancia', 'distanciometro', 'laser'],
-            'medico' => ['médico', 'medico', 'hospital', 'equipos medicos']
-        ];
-        
-        foreach ($categorias as $categoria => $palabras) {
-            foreach ($palabras as $palabra) {
-                if (strpos($question_lower, $palabra) !== false) {
-                    // Buscar productos de esa categoría
-                    return $this->buscar_por_categoria($categoria, $question);
-                }
-            }
-        }
-        
-        // =============================================
-        // RESPUESTAS ESPECÍFICAS PROGRAMADAS
-        // =============================================
-        
-        // Ubicación
-        if (strpos($question_lower, 'ubicacion') !== false || 
-            strpos($question_lower, 'ubicación') !== false ||
-            strpos($question_lower, 'donde') !== false ||
-            strpos($question_lower, 'dónde') !== false ||
-            strpos($question_lower, 'direccion') !== false ||
-            strpos($question_lower, 'dirección') !== false ||
-            strpos($question_lower, 'encuentran') !== false) {
-            return $this->respuesta_ubicacion();
-        }
-        
-        // Contacto
-        if (strpos($question_lower, 'contacto') !== false ||
-            strpos($question_lower, 'telefono') !== false ||
-            strpos($question_lower, 'teléfono') !== false ||
-            strpos($question_lower, 'whatsapp') !== false ||
-            strpos($question_lower, 'email') !== false ||
-            strpos($question_lower, 'correo') !== false ||
-            strpos($question_lower, 'celular') !== false) {
-            return $this->respuesta_contacto();
-        }
-        
-        // Empresa / Quiénes somos
-        if (strpos($question_lower, 'empresa') !== false ||
-            strpos($question_lower, 'quienes') !== false ||
-            strpos($question_lower, 'quiénes') !== false ||
-            strpos($question_lower, 'nosotros') !== false ||
-            strpos($question_lower, 'sobre') !== false ||
-            strpos($question_lower, 'acerca') !== false ||
-            strpos($question_lower, 'pbtechnologies') !== false) {
-            return $this->respuesta_empresa();
-        }
-        
-        // =============================================
         // DETECCIÓN DE MARCAS (sin número de modelo)
         // =============================================
         
@@ -134,9 +118,8 @@ class RAG_Chat {
         ];
         
         foreach ($marcas_conocidas as $marca => $funcion) {
-            // Detectar si es solo la marca (sin número de modelo)
             if (strpos($question_lower, $marca) !== false) {
-                // Verificar si hay números de modelo (ej: cmm60, mpi507, etc.)
+                // Verificar si hay números de modelo (ej: cmm60, mpi507)
                 $tiene_modelo = false;
                 foreach (explode(' ', $question_lower) as $palabra) {
                     if (preg_match('/[a-z]+\d+/', $palabra) || preg_match('/\d+[a-z]+/', $palabra)) {
@@ -145,9 +128,32 @@ class RAG_Chat {
                     }
                 }
                 
-                // Si es solo la marca sin modelo, mostrar info de la marca
                 if (!$tiene_modelo && strlen($question_lower) < 30) {
                     return $this->$funcion();
+                }
+            }
+        }
+        
+        // =============================================
+        // DETECCIÓN DE CATEGORÍAS
+        // =============================================
+        
+        $categorias = [
+            'electrico' => ['eléctrico', 'electrico', 'electricos', 'eléctricos', 'medicion electrica', 'parametros electricos', 'voltaje', 'corriente', 'potencia'],
+            'temperatura' => ['temperatura', 'termico', 'termica', 'termográfico', 'termografica', 'calor', 'grado', 'termometro'],
+            'pinzas' => ['pinza', 'pinzas', 'amperimetrica', 'amperimetricas', 'amperometrica'],
+            'presion' => ['presión', 'presion', 'presiones', 'bar', 'psi'],
+            'humedad' => ['humedad', 'humedad relativa', 'hr', 'higrometro'],
+            'gas' => ['gas', 'gases', 'detector de gas', 'co2', 'oxigeno'],
+            'vibracion' => ['vibración', 'vibracion', 'vibraciones', 'aceleracion'],
+            'distancia' => ['distancia', 'distanciometro', 'laser', 'medidor laser'],
+            'medico' => ['médico', 'medico', 'hospital', 'equipos medicos', 'rigel']
+        ];
+        
+        foreach ($categorias as $categoria => $palabras) {
+            foreach ($palabras as $palabra) {
+                if (strpos($question_lower, $palabra) !== false) {
+                    return $this->buscar_por_categoria($categoria, $question);
                 }
             }
         }
@@ -169,11 +175,89 @@ class RAG_Chat {
         return "🤖 **PBTechnologies**\n\n" .
                "No encontré información específica sobre '{$question}'.\n\n" .
                "**Puedes preguntarme sobre:**\n" .
+               "• **La empresa** (ej: 'quienes son', 'que ofrecen', 'servicios')\n" .
                "• **Productos** específicos (ej: 'multimetro sonel cmm 60')\n" .
                "• **Marcas** (FOTRIC, SONEL, HOBO, TROTEC, RIGEL)\n" .
                "• **Categorías** (cámaras termográficas, pinzas amperimétricas)\n" .
-               "• **Ubicación** y **contacto**\n\n" .
-               "¿Qué te gustaría saber?";
+               "• **Ubicación** y **contacto**";
+    }
+    
+    // RESPUESTA DE SERVICIOS
+    private function respuesta_servicios() {
+        return "🤖 **PBTechnologies - Servicios**\n\n" .
+               "Ofrecemos una amplia gama de servicios especializados en instrumentación industrial:\n\n" .
+               "🔧 **Soluciones Industriales**\n" .
+               "• Instrumentos de medición para control y monitoreo industrial\n" .
+               "• Asesoría en selección de equipos según tu necesidad\n\n" .
+               "📊 **Servicios de Calibración**\n" .
+               "• Calibración profesional realizada por expertos\n" .
+               "• Aseguramos la exactitud de tus equipos\n" .
+               "• Certificados de calibración\n\n" .
+               "🛠️ **Soporte Técnico Especializado**\n" .
+               "• Asesoramiento pre-venta y post-venta\n" .
+               "• Soporte técnico por profesionales capacitados\n" .
+               "• Garantía de equipos\n" .
+               "• Respaldo de marcas representadas\n\n" .
+               "💻 **Soluciones Sistematizadas**\n" .
+               "• Desarrollo de páginas web\n" .
+               "• Herramientas digitales a medida\n" .
+               "• Automatización de procesos\n\n" .
+               "📍 **Ubicados en:** Santa Cruz de la Sierra, Bolivia\n\n" .
+               "¿Necesitas información más específica sobre algún servicio?";
+    }
+    
+    // RESPUESTA DE EMPRESA
+    private function respuesta_empresa() {
+        return "🤖 **PBTechnologies SRL**\n\n" .
+               "Somos una empresa boliviana especializada en **instrumentación industrial** con amplia experiencia en el mercado.\n\n" .
+               "**Nuestra misión:**\n" .
+               "Proveer los instrumentos de medición más robustos y precisos del mercado, con calidad, garantía y respaldo técnico.\n\n" .
+               "**Representamos marcas de prestigio mundial:**\n" .
+               "• **FOTRIC** - Cámaras termográficas\n" .
+               "• **SONEL** - Instrumentos de medición eléctrica\n" .
+               "• **HOBO** - Monitoreo ambiental\n" .
+               "• **TROTEC** - Herramientas y equipos de medición\n" .
+               "• **RIGEL** - Equipos médicos y de seguridad\n" .
+               "• **MPOWER** - Electrónica industrial\n" .
+               "• **Intoxilyzer** - Equipos de detección de alcohol\n\n" .
+               "**Servicios:**\n" .
+               "• Venta de instrumentos\n" .
+               "• Calibración profesional\n" .
+               "• Soporte técnico especializado\n" .
+               "• Asesoría en selección de equipos\n\n" .
+               "📍 **Ubicados en:** Santa Cruz de la Sierra, Bolivia\n\n" .
+               "¿Te gustaría conocer más sobre alguna marca, servicio o producto en específico?";
+    }
+    
+    private function respuesta_ubicacion() {
+        return "🤖 **PBTechnologies - Ubicación**\n\n" .
+               "📍 **Dirección:**\n" .
+               "• Av. Cristo Redentor, C. Cosorio 2015\n" .
+               "• Santa Cruz de la Sierra, Bolivia\n\n" .
+               "📞 **Teléfonos:**\n" .
+               "• +591 710 33004 (WhatsApp)\n" .
+               "• +591 3 3454600 (Fijo)\n\n" .
+               "🕒 **Horario de atención:**\n" .
+               "• Lunes a Viernes: 9:00 AM - 6:00 PM\n\n" .
+               "¿Necesitas indicaciones para llegar?";
+    }
+    
+    private function respuesta_contacto() {
+        return "🤖 **PBTechnologies - Contacto**\n\n" .
+               "📞 **Teléfonos:**\n" .
+               "• WhatsApp: +591 710 33004\n" .
+               "• Fijo: +591 3 3454600\n\n" .
+               "📧 **Email:**\n" .
+               "• info@pbtechnologies.com\n" .
+               "• ventas@pbtechnologies.com\n\n" .
+               "📍 **Dirección:**\n" .
+               "• Av. Cristo Redentor, C. Cosorio 2015\n" .
+               "• Santa Cruz de la Sierra, Bolivia\n\n" .
+               "🌐 **Web:**\n" .
+               "• https://pbt.com.bo\n\n" .
+               "**Horario de atención:**\n" .
+               "• Lunes a Viernes: 9:00 AM - 6:00 PM\n\n" .
+               "¿Necesitas contactar a alguien en específico?";
     }
     
     private function buscar_por_categoria($categoria, $pregunta_original) {
@@ -240,10 +324,9 @@ class RAG_Chat {
         global $wpdb;
         $tabla = $wpdb->prefix . 'rag_knowledge';
         
-        // Limpiar y preparar la consulta
         $question = strtolower(trim($question));
         
-        // Eliminar verbos comunes y palabras vacías
+        // Palabras a ignorar
         $verbos = ['tiene', 'tienen', 'tienes', 'tener', 'posee', 'poseen', 'cuenta', 'cuentan', 'dispone', 'disponen', 'incluye', 'incluyen', 'trae', 'traen', 'viene', 'vienen', 'ofrece', 'ofrecen', 'presenta', 'presentan', 'muestra', 'muestran', 'exhibe', 'exhiben', 'muéstrame', 'dime', 'cuéntame', 'quiero', 'quisiera', 'necesito', 'busco', 'estoy', 'buscando', 'hay', 'haber', 'existe', 'existen', 'dame', 'recomienda', 'recomiéndame', 'sugiere', 'sugiéreme'];
         
         $palabras_ignorar = array_merge(['de', 'la', 'el', 'en', 'con', 'para', 'por', 'una', 'un', 'y', 'a', 'que', 'es', 'como', 'los', 'las', 'del', 'al', 'sobre', 'mi', 'tu', 'su', 'mis', 'tus', 'sus', 'me', 'te', 'se', 'nos', 'os'], $verbos);
@@ -253,12 +336,10 @@ class RAG_Chat {
             return strlen($p) > 2 && !in_array($p, $palabras_ignorar);
         });
         
-        // Si no hay palabras clave significativas, devolver vacío
         if (empty($keywords)) {
             return [];
         }
         
-        // Construir consulta SQL
         $condiciones = [];
         $params = [];
         
@@ -287,12 +368,9 @@ class RAG_Chat {
     }
     
     private function formatear_respuesta_producto($resultados, $pregunta_original) {
-        // Agrupar por URL (producto)
         $productos = [];
         foreach ($resultados as $row) {
-            $url = $row->source_url;
-            // Limpiar URL (quitar /tab-especificaciones-tecnicas si existe)
-            $url = preg_replace('/\/tab-especificaciones-tec.*/', '', $url);
+            $url = preg_replace('/\/tab-especificaciones-tec.*/', '', $row->source_url);
             
             if (!isset($productos[$url])) {
                 $productos[$url] = [
@@ -306,14 +384,13 @@ class RAG_Chat {
                 ];
             }
             
-            // Clasificar el contenido
             $content = $row->content;
             
             if (strpos($content, 'Producto:') !== false) {
                 $productos[$url]['nombre'] = str_replace('Producto:', '', $content);
                 $productos[$url]['nombre'] = trim($productos[$url]['nombre']);
             } 
-            elseif (preg_match('/(\d+)\s*[WVAwva]|voltaje|corriente|potencia|rango|precisión|medición|rango|frecuencia|temperatura|humedad|presión|caudal|nivel|distancia|velocidad|aceleración|fuerza|peso|capacidad|dimensiones|medidas|peso|modelo|serie|marca|fabricante|origen|garantía|protección|clase|grado|exactitud|error|linealidad|histéresis|deriva|estabilidad|resolución|sensibilidad|alcance|escala|división|precio|costo|valor|disponible|stock|entrega|envío|transporte|embalaje|accesorios|opciones|configuración|programación|software|aplicación|uso|manejo|operación|funcionamiento|mantenimiento|calibración|ajuste|verificación|comprobación|prueba|test|ensayo|análisis|evaluación|diagnóstico|monitoreo|control|regulación|supervisión|gestion|administración|planificación|diseño|desarrollo|fabricación|producción|comercialización|distribución|venta|compra|adquisición|solicitud|pedido|orden|factura|pago|forma|método|medio|tiempo|plazo|condición|término|política|norma|regla|ley|reglamento|directiva|instrucción|manual|guía|documento|archivo|registro|historial|informe|reporte|lista|catálogo|folleto|ficha|hoja|datos|información|detalle|especificación|característica|propiedad|atributo|cualidad|ventaja|beneficio|valor|prestación|funcionalidad|capacidad|habilidad|aptitud|competencia|experiencia|conocimiento|saber|hacer|poder|querer|deber|haber|estar|ser|tener|hacer|poder|deber|haber|estar|ser|tener|hacer|poder|deber|haber|estar|ser|tener/i', $content)) {
+            elseif (preg_match('/(\d+)\s*[WVAwva]|voltaje|corriente|potencia|rango|precisión|medición|frecuencia|temperatura|humedad|presión|caudal|nivel|distancia|velocidad|aceleración|fuerza|peso|capacidad|dimensiones|medidas|peso|modelo|serie|marca|fabricante|origen|garantía|protección|clase|grado|exactitud|error|linealidad|histéresis|deriva|estabilidad|resolución|sensibilidad|alcance|escala|división|precio|costo|valor|disponible|stock|entrega|envío|transporte|embalaje|accesorios|opciones|configuración|programación|software|aplicación|uso|manejo|operación|funcionamiento|mantenimiento|calibración|ajuste|verificación|comprobación|prueba|test|ensayo|análisis|evaluación|diagnóstico|monitoreo|control|regulación|supervisión|gestion|administración|planificación|diseño|desarrollo|fabricación|producción|comercialización|distribución|venta|compra|adquisición|solicitud|pedido|orden|factura|pago|forma|método|medio|tiempo|plazo|condición|término|política|norma|regla|ley|reglamento|directiva|instrucción|manual|guía|documento|archivo|registro|historial|informe|reporte|lista|catálogo|folleto|ficha|hoja|datos|información|detalle|especificación|característica|propiedad|atributo|cualidad|ventaja|beneficio|valor|prestación|funcionalidad|capacidad|habilidad|aptitud|competencia|experiencia|conocimiento|saber|hacer|poder|querer|deber|haber|estar|ser|tener|hacer|poder|deber|haber|estar|ser|tener|hacer|poder|deber|haber|estar|ser|tener/i', $content)) {
                 $productos[$url]['caracteristicas'][] = $content;
             } 
             elseif (strlen($content) > 40 && empty($productos[$url]['descripcion'])) {
@@ -323,7 +400,6 @@ class RAG_Chat {
                 $productos[$url]['descripcion'] = $descripcion_limpia;
             }
             
-            // Extraer categoría y marca si es posible
             if (preg_match('/Categoría:?\s*([^\n,]+)/i', $content, $matches)) {
                 $productos[$url]['categoria'] = trim($matches[1]);
             }
@@ -331,7 +407,6 @@ class RAG_Chat {
                 $productos[$url]['marca'] = trim($matches[1]);
             }
             
-            // Calcular score basado en la pregunta
             $pregunta_lower = strtolower($pregunta_original);
             $content_lower = strtolower($content);
             
@@ -341,7 +416,6 @@ class RAG_Chat {
                 }
             }
             
-            // Bonus si la palabra está en el nombre del producto
             if (isset($productos[$url]['nombre']) && !empty($productos[$url]['nombre'])) {
                 $nombre_lower = strtolower($productos[$url]['nombre']);
                 foreach (explode(' ', $pregunta_lower) as $palabra) {
@@ -352,15 +426,12 @@ class RAG_Chat {
             }
         }
         
-        // Ordenar por score
         usort($productos, function($a, $b) {
             return $b['score'] <=> $a['score'];
         });
         
-        // Tomar el producto más relevante
         $producto = $productos[0];
         
-        // Formatear respuesta
         $nombre_producto = trim($producto['nombre']);
         if (empty($nombre_producto)) {
             $nombre_producto = basename($producto['url']);
@@ -370,7 +441,6 @@ class RAG_Chat {
         
         $respuesta = "🤖 **{$nombre_producto}**\n\n";
         
-        // Determinar tipo de producto para etiqueta
         $tipo_producto = [];
         if (stripos($nombre_producto, 'termografica') !== false || stripos($nombre_producto, 'camara') !== false) {
             $tipo_producto[] = "📷 Cámara térmica";
@@ -387,23 +457,15 @@ class RAG_Chat {
         if (stripos($nombre_producto, 'presion') !== false || stripos($nombre_producto, 'presión') !== false) {
             $tipo_producto[] = "⏲️ Medidor de presión";
         }
-        if (stripos($nombre_producto, 'humedad') !== false) {
-            $tipo_producto[] = "💧 Medidor de humedad";
-        }
-        if (stripos($nombre_producto, 'gas') !== false || stripos($nombre_producto, 'detector') !== false) {
-            $tipo_producto[] = "⚠️ Detector de gas";
-        }
         
         if (!empty($tipo_producto)) {
             $respuesta .= "**Tipo:** " . implode(' | ', $tipo_producto) . "\n\n";
         }
         
-        // Agregar descripción si existe
         if (!empty($producto['descripcion']) && strlen($producto['descripcion']) > 30) {
             $respuesta .= $producto['descripcion'] . "\n\n";
         }
         
-        // Agregar características técnicas
         if (!empty($producto['caracteristicas'])) {
             $respuesta .= "**Características principales:**\n";
             $caracteristicas_unicas = array_unique($producto['caracteristicas']);
@@ -425,7 +487,6 @@ class RAG_Chat {
             $respuesta .= "\n";
         }
         
-        // Agregar categoría y marca si existen
         if (!empty($producto['categoria']) || !empty($producto['marca'])) {
             $info_extra = [];
             if (!empty($producto['marca'])) {
@@ -439,65 +500,10 @@ class RAG_Chat {
             }
         }
         
-        // Agregar enlace al producto (SIN /tab-especificaciones-tecnicas)
         $respuesta .= "🔗 **Ver producto:** [Enlace a la página oficial]({$producto['url']})\n\n";
-        
         $respuesta .= "¿Necesitas más información sobre este producto?";
         
         return $respuesta;
-    }
-    
-    private function respuesta_ubicacion() {
-        return "🤖 **PBTechnologies - Ubicación**\n\n" .
-               "📍 **Dirección:**\n" .
-               "• Av. Cristo Redentor, C. Cosorio 2015\n" .
-               "• Santa Cruz de la Sierra, Bolivia\n\n" .
-               "📞 **Teléfonos:**\n" .
-               "• +591 710 33004 (WhatsApp)\n" .
-               "• +591 3 3454600 (Fijo)\n\n" .
-               "🕒 **Horario de atención:**\n" .
-               "• Lunes a Viernes: 9:00 AM - 6:00 PM\n\n" .
-               "¿Necesitas indicaciones para llegar?";
-    }
-    
-    private function respuesta_contacto() {
-        return "🤖 **PBTechnologies - Contacto**\n\n" .
-               "📞 **Teléfonos:**\n" .
-               "• WhatsApp: +591 710 33004\n" .
-               "• Fijo: +591 3 3454600\n\n" .
-               "📧 **Email:**\n" .
-               "• info@pbtechnologies.com\n" .
-               "• ventas@pbtechnologies.com\n\n" .
-               "📍 **Dirección:**\n" .
-               "• Av. Cristo Redentor, C. Cosorio 2015\n" .
-               "• Santa Cruz de la Sierra, Bolivia\n\n" .
-               "🌐 **Web:**\n" .
-               "• https://pbt.com.bo\n\n" .
-               "**Horario de atención:**\n" .
-               "• Lunes a Viernes: 9:00 AM - 6:00 PM\n\n" .
-               "¿Necesitas contactar a alguien en específico?";
-    }
-    
-    private function respuesta_empresa() {
-        return "🤖 **PBTechnologies SRL**\n\n" .
-               "Somos una empresa boliviana especializada en **instrumentación industrial** con amplia experiencia en el mercado.\n\n" .
-               "**Nuestra misión:**\n" .
-               "Proveer los instrumentos de medición más robustos y precisos del mercado, con calidad, garantía y respaldo técnico.\n\n" .
-               "**Representamos marcas de prestigio mundial:**\n" .
-               "• **FOTRIC** - Cámaras termográficas\n" .
-               "• **SONEL** - Instrumentos de medición eléctrica\n" .
-               "• **HOBO** - Monitoreo ambiental\n" .
-               "• **TROTEC** - Herramientas y equipos de medición\n" .
-               "• **RIGEL** - Equipos médicos y de seguridad\n" .
-               "• **MPOWER** - Electrónica industrial\n" .
-               "• **Intoxilyzer** - Equipos de detección de alcohol\n\n" .
-               "**Servicios:**\n" .
-               "• Venta de instrumentos\n" .
-               "• Calibración profesional\n" .
-               "• Soporte técnico especializado\n" .
-               "• Asesoría en selección de equipos\n\n" .
-               "📍 **Ubicados en:** Santa Cruz de la Sierra, Bolivia\n\n" .
-               "¿Te gustaría conocer más sobre alguna marca o producto en específico?";
     }
     
     private function respuesta_marca_fotric() {
