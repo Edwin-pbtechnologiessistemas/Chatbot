@@ -56,99 +56,47 @@ class RAG_PBTechnologies {
     }
     
     public function run_complete_extraction() {
-        if (!$this->extractor) {
-            return;
-        }
-        
-        // Aumentar tiempo a 30 minutos para estar seguros
-        set_time_limit(1800);
-        ini_set('max_execution_time', 1800);
-        ini_set('memory_limit', '512M');
-        
-        // Forzar salida
-        ob_implicit_flush(true);
-        @ob_end_flush();
-        
-        echo '<div class="wrap">';
-        echo '<h1>🚀 EXTRACCIÓN COMPLETA INICIADA</h1>';
-        echo '<div class="notice notice-info" style="padding:15px;">';
-        echo '<p><strong>⏱️ Procesando... Esto puede tomar 20-30 minutos. No cierres esta ventana.</strong></p>';
-        echo '</div>';
-        
-        // 1️⃣ EXTRAER URLs DE PRODUCTOS
-        echo '<h2>🔍 PASO 1: Extrayendo URLs de productos con Firecrawl</h2>';
-        flush();
-        
-        $urls_productos = $this->extractor->extract_product_urls_directo();
-        
-        if (empty($urls_productos)) {
-            echo '<p style="color:red;">❌ No se encontraron URLs de productos</p>';
-            echo '<p><a href="' . admin_url('admin.php?page=rag-chat') . '" class="button">Volver</a></p>';
-            echo '</div>';
-            return;
-        }
-        
-        echo '<p>✅ Total URLs encontradas: <strong>' . count($urls_productos) . '</strong></p>';
-        flush();
-        
-        // 2️⃣ EXTRAER CADA PRODUCTO
-        echo '<h2>📦 PASO 2: Extrayendo información de cada producto</h2>';
-        flush();
-        
-        $exitosos = 0;
-        $fallidos = 0;
-        $total = count($urls_productos);
-        
-        echo '<div style="background:#f0f0f0; padding:15px; max-height:400px; overflow-y:scroll; border:1px solid #ccc; margin:20px 0;">';
-        
-        foreach ($urls_productos as $index => $url) {
-            $numero = $index + 1;
-            $nombre = basename($url);
-            
-            echo "<p><strong>{$numero}/{$total}</strong> - Procesando: {$nombre}...</p>";
-            flush();
-            
-            $chunks = $this->extractor->extract_url($url, 'producto');
-            
-            if ($chunks !== false && $chunks > 0) {
-                $exitosos++;
-                echo "<p style='color:green; margin-left:20px;'>✅ Extraídos {$chunks} fragmentos</p>";
-            } else {
-                $fallidos++;
-                echo "<p style='color:red; margin-left:20px;'>❌ Error al extraer</p>";
-            }
-            
-            flush();
-            
-            // Pausa cada 10 productos
-            if ($numero % 10 == 0) {
-                $porcentaje = round(($numero / $total) * 100);
-                echo "<p style='color:blue;'>⏸️ Progreso: {$numero}/{$total} ({$porcentaje}%) - Pausa de 2 segundos...</p>";
-                flush();
-                sleep(2);
-            }
-        }
-        
-        echo '</div>';
-        
-        // 3️⃣ RESUMEN FINAL
-        global $wpdb;
-        $tabla = $wpdb->prefix . 'rag_knowledge';
-        $total_docs = $wpdb->get_var("SELECT COUNT(*) FROM $tabla");
-        $productos_unicos = $wpdb->get_var("SELECT COUNT(DISTINCT source_url) FROM $tabla WHERE content_type = 'producto'");
-        
-        echo '<div class="notice notice-success" style="margin-top:20px; padding:15px;">';
-        echo '<h2>📊 RESUMEN FINAL</h2>';
-        echo "<p>✅ Productos exitosos: <strong>{$exitosos}</strong></p>";
-        echo "<p>❌ Productos fallidos: <strong>{$fallidos}</strong></p>";
-        echo "<p>📦 Total procesados: <strong>" . ($exitosos + $fallidos) . "</strong></p>";
-        echo "<p>📄 Total documentos en base: <strong>{$total_docs}</strong></p>";
-        echo "<p>🎯 Productos únicos guardados: <strong>{$productos_unicos}</strong></p>";
-        echo '</div>';
-        
-        echo '<p><a href="' . admin_url('admin.php?page=rag-chat') . '" class="button button-primary">Actualizar página</a></p>';
-        echo '</div>';
+    if (!$this->extractor) {
+        return;
     }
+    
+    // Aumentar tiempo a 30 minutos
+    set_time_limit(1800);
+    ini_set('max_execution_time', 1800);
+    ini_set('memory_limit', '512M');
+    
+    // Forzar salida
+    ob_implicit_flush(true);
+    @ob_end_flush();
+    
+    echo '<div class="wrap">';
+    echo '<h1>🚀 EXTRACCIÓN COMPLETA INICIADA</h1>';
+    echo '<div class="notice notice-info" style="padding:15px;">';
+    echo '<p><strong>⏱️ Procesando TODO (inicio + about + productos)... 20-30 minutos. No cierres esta ventana.</strong></p>';
+    echo '</div>';
+    
+    // ✅ EXTRAER TODO (inicio, about, productos)
+    $this->extractor->extract_everything();
+    
+    // 📊 RESUMEN FINAL
+    global $wpdb;
+    $tabla = $wpdb->prefix . 'rag_knowledge';
+    $total_docs = $wpdb->get_var("SELECT COUNT(*) FROM $tabla");
+    $productos_unicos = $wpdb->get_var("SELECT COUNT(DISTINCT source_url) FROM $tabla WHERE content_type = 'producto'");
+    $inicio = $wpdb->get_var("SELECT COUNT(*) FROM $tabla WHERE content_type = 'inicio'");
+    $empresa = $wpdb->get_var("SELECT COUNT(*) FROM $tabla WHERE content_type = 'empresa'");
+    
+    echo '<div class="notice notice-success" style="margin-top:20px; padding:15px;">';
+    echo '<h2>📊 RESUMEN FINAL COMPLETO</h2>';
+    echo "<p>🏠 Página de inicio: <strong>{$inicio} fragmentos</strong></p>";
+    echo "<p>👥 Página about-us: <strong>{$empresa} fragmentos</strong></p>";
+    echo "<p>📦 Productos únicos: <strong>{$productos_unicos} / 112</strong></p>";
+    echo "<p>📄 Total documentos: <strong>{$total_docs}</strong></p>";
+    echo '</div>';
+    
+    echo '<p><a href="' . admin_url('admin.php?page=rag-chat') . '" class="button button-primary">Actualizar página</a></p>';
+    echo '</div>';
+}
     
     public function enqueue_scripts() {
         wp_enqueue_style('rag-chat', RAG_PLUGIN_URL . 'assets/chat.css', array(), '1.0');
