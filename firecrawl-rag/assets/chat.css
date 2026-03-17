@@ -2,94 +2,141 @@
    RAG CHAT WIDGET - PBTechnologies
    ========================================= */
 
+:root {
+    --pbt-dark: #222222;       
+    --pbt-dark-sec: #333333;   
+    --pbt-red: #da291c;        
+    --pbt-red-hover: #b52217;  
+    --pbt-light: #f8fafc;      
+}
+
 #rag-chat-widget {
     position: fixed;
     bottom: 20px;
-    right: 20px;
+    left: 20px; 
+    right: auto; 
     z-index: 999999;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
 }
 
+/* ----- MENSAJE FLOTANTE EXTERNO (TOOLTIP) ----- */
+.rag-chat-tooltip {
+    position: absolute;
+    left: 85px;
+    bottom: 12px;
+    background: white;
+    padding: 12px 18px;
+    border-radius: 15px 15px 15px 0;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    font-size: 14px;
+    color: var(--pbt-dark);
+    font-weight: 500;
+    white-space: nowrap;
+    border: 1px solid #e2e8f0;
+    cursor: pointer;
+    animation: bounceInTooltip 0.6s ease;
+    transform-origin: bottom left;
+    z-index: 1000000;
+}
+
+.rag-chat-tooltip::after {
+    content: '';
+    position: absolute;
+    left: -8px;
+    bottom: 0;
+    border-width: 0 10px 12px 0;
+    border-style: solid;
+    border-color: transparent white transparent transparent;
+}
+
+@keyframes bounceInTooltip {
+    0% { opacity: 0; transform: scale(0.5); }
+    100% { opacity: 1; transform: scale(1); }
+}
+
 /* ----- BOTÓN FLOTANTE ----- */
 #rag-chat-button {
-    width: 60px;
-    height: 60px;
+    width: 65px;
+    height: 65px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #0055a4, #003366);
-    color: white;
+    background: var(--pbt-dark);
+    background-image: url('https://pbt.com.bo/wp-content/uploads/2025/04/ico_griss_vr4_S.png');
+    background-size: 60%; 
+    background-position: center;
+    background-repeat: no-repeat;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    box-shadow: 0 4px 15px rgba(0, 51, 102, 0.3);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
     transition: all 0.3s ease;
-    font-size: 24px;
-    border: 2px solid rgba(255, 255, 255, 0.2);
+    border: 2px solid var(--pbt-red);
+    color: transparent; 
+    font-size: 0;
 }
 
 #rag-chat-button:hover {
-    transform: scale(1.1) rotate(5deg);
-    box-shadow: 0 6px 20px rgba(0, 51, 102, 0.4);
-    background: linear-gradient(135deg, #003366, #002244);
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(218, 41, 28, 0.4); 
+}
+
+#rag-chat-button * {
+    display: none !important;
 }
 
 /* ----- VENTANA DEL CHAT ----- */
 #rag-chat-window {
     position: absolute;
-    bottom: 80px;
-    right: 0;
+    bottom: 85px;
+    left: 0; 
+    right: auto;
     width: 380px;
-    height: 600px;
+    height: 550px; /* Reducido ligeramente */
     background: white;
     border-radius: 20px;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    border: 1px solid rgba(0, 85, 164, 0.2);
-    animation: slideIn 0.3s ease;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    display: none; 
+    animation: slideInLeft 0.3s ease;
+    transform-origin: bottom left;
 }
 
-@keyframes slideIn {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+@keyframes slideInLeft {
+    from { opacity: 0; transform: translateY(20px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 /* ----- HEADER DEL CHAT ----- */
 #rag-chat-header {
-    padding: 18px 20px;
-    background: linear-gradient(135deg, #0055a4, #003366);
+    padding: 15px 20px; /* Reducido */
+    background: linear-gradient(135deg, var(--pbt-dark), var(--pbt-dark-sec));
     color: white;
     display: flex;
     justify-content: space-between;
     align-items: center;
     font-weight: 600;
     font-size: 16px;
-    letter-spacing: 0.5px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 3px solid var(--pbt-red); 
+    flex-shrink: 0; /* Evita que se encoja */
 }
 
 #rag-chat-header span::before {
-    content: "⚡";
+    content: "⚙️"; 
     margin-right: 8px;
     font-size: 18px;
 }
 
 #rag-chat-close {
-    background: rgba(255, 255, 255, 0.2);
+    background: transparent;
     border: none;
     color: white;
-    font-size: 24px;
+    font-size: 28px;
     cursor: pointer;
     width: 30px;
     height: 30px;
-    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -99,108 +146,94 @@
 }
 
 #rag-chat-close:hover {
-    background: rgba(255, 255, 255, 0.3);
+    color: var(--pbt-red);
     transform: rotate(90deg);
 }
 
 /* ----- ÁREA DE MENSAJES ----- */
 #rag-chat-messages {
-    flex: 1;
-    padding: 20px;
+    flex: 1 1 auto; /* Crece y se encoge automáticamente */
+    padding: 15px;
     overflow-y: auto;
-    background: #f8fafc;
+    background: var(--pbt-light);
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 12px;
+    min-height: 0; /* IMPORTANTE: permite que se encoja */
+    height: 100%; /* Ocupa el espacio disponible */
 }
 
-/* Estilo de los mensajes */
 .rag-message {
     max-width: 85%;
-    padding: 12px 16px;
-    border-radius: 18px;
-    line-height: 1.5;
+    padding: 10px 14px; /* Reducido */
+    border-radius: 16px;
+    line-height: 1.4;
     font-size: 14px;
     word-wrap: break-word;
     animation: messageAppear 0.3s ease;
-    position: relative;
 }
 
 @keyframes messageAppear {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
-/* Mensajes del usuario */
 .rag-message.user {
-    background: linear-gradient(135deg, #0055a4, #003366);
+    background: var(--pbt-red);
     color: white;
     align-self: flex-end;
     border-bottom-right-radius: 4px;
-    box-shadow: 0 2px 5px rgba(0, 85, 164, 0.2);
+    box-shadow: 0 2px 5px rgba(218, 41, 28, 0.2);
 }
 
-/* Mensajes del bot */
 .rag-message.bot {
     background: white;
     color: #1e293b;
     align-self: flex-start;
     border-bottom-left-radius: 4px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-    border-left: 3px solid #0055a4;
+    border-left: 3px solid var(--pbt-dark); 
 }
 
-/* Timestamp (opcional) */
 .message-time {
-    font-size: 10px;
+    font-size: 9px;
     opacity: 0.7;
-    margin-top: 5px;
+    margin-top: 4px;
     text-align: right;
 }
 
 /* ----- ÁREA DE ENTRADA ----- */
 #rag-chat-input-area {
-    padding: 18px;
+    padding: 12px 15px; /* Reducido */
     background: white;
     border-top: 1px solid #e2e8f0;
     display: flex;
-    gap: 10px;
+    gap: 8px;
     align-items: center;
+    flex-shrink: 0; /* Evita que se encoja */
 }
 
 #rag-chat-input {
     flex: 1;
-    padding: 12px 18px;
+    padding: 10px 15px;
     border: 2px solid #e2e8f0;
-    border-radius: 30px;
+    border-radius: 25px;
     outline: none;
     font-size: 14px;
     transition: all 0.2s;
-    background: #f8fafc;
+    background: var(--pbt-light);
 }
 
 #rag-chat-input:focus {
-    border-color: #0055a4;
+    border-color: var(--pbt-dark);
     background: white;
-    box-shadow: 0 0 0 3px rgba(0, 85, 164, 0.1);
-}
-
-#rag-chat-input::placeholder {
-    color: #94a3b8;
-    font-style: italic;
 }
 
 #rag-chat-send {
-    width: 45px;
-    height: 45px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #0055a4, #003366);
+    background: var(--pbt-red);
     color: white;
     border: none;
     cursor: pointer;
@@ -208,154 +241,79 @@
     align-items: center;
     justify-content: center;
     transition: all 0.2s;
-    font-size: 18px;
-    box-shadow: 0 2px 5px rgba(0, 85, 164, 0.3);
+    box-shadow: 0 2px 5px rgba(218, 41, 28, 0.3);
+    padding: 0; 
+    flex-shrink: 0;
+}
+
+#rag-chat-send svg {
+    margin-left: 2px;
+    width: 18px;
+    height: 18px;
 }
 
 #rag-chat-send:hover {
     transform: scale(1.1);
-    background: linear-gradient(135deg, #003366, #002244);
-    box-shadow: 0 4px 10px rgba(0, 85, 164, 0.4);
-}
-
-#rag-chat-send:active {
-    transform: scale(0.95);
+    background: var(--pbt-red-hover);
 }
 
 /* ----- INDICADOR DE ESCRITURA ----- */
 #rag-chat-typing {
-    padding: 12px 18px;
+    padding: 8px 15px;
     background: white;
     border-top: 1px solid #e2e8f0;
     display: flex;
     align-items: center;
     gap: 5px;
+    flex-shrink: 0;
 }
 
 .typing-dot {
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: #0055a4;
+    background: var(--pbt-dark);
     opacity: 0.6;
     animation: typingAnimation 1.4s infinite;
 }
 
-.typing-dot:nth-child(2) {
-    animation-delay: 0.2s;
-}
-
-.typing-dot:nth-child(3) {
-    animation-delay: 0.4s;
-}
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
 
 @keyframes typingAnimation {
-    0%, 60%, 100% {
-        transform: translateY(0);
-        opacity: 0.6;
-    }
-    30% {
-        transform: translateY(-5px);
-        opacity: 1;
-    }
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.6; }
+    30% { transform: translateY(-5px); opacity: 1; }
 }
 
 /* ----- FORMATO DE RESPUESTAS ----- */
 .rag-message.bot strong {
-    color: #0055a4;
+    color: var(--pbt-red);
     font-weight: 600;
 }
-
-.rag-message.bot em {
-    color: #64748b;
-    font-style: italic;
+.rag-message.bot ul, .rag-message.bot ol {
+    margin: 5px 0;
+    padding-left: 18px;
 }
-
-.rag-message.bot ul, 
-.rag-message.bot ol {
-    margin: 8px 0;
-    padding-left: 20px;
-}
-
 .rag-message.bot li {
-    margin: 4px 0;
-}
-
-.rag-message.bot hr {
-    margin: 10px 0;
-    border: none;
-    border-top: 1px dashed #cbd5e1;
-}
-
-/* ----- NOTIFICACIÓN DE ERROR ----- */
-.rag-message.error {
-    background: #fee2e2;
-    color: #991b1b;
-    border-left: 3px solid #dc2626;
-    font-weight: 500;
-}
-
-/* ----- RESPONSIVE (MÓVILES) ----- */
-@media (max-width: 480px) {
-    #rag-chat-window {
-        width: 100%;
-        height: 100%;
-        bottom: 0;
-        right: 0;
-        border-radius: 0;
-        position: fixed;
-        top: 0;
-        left: 0;
-    }
-    
-    #rag-chat-button {
-        width: 50px;
-        height: 50px;
-        font-size: 20px;
-        bottom: 15px;
-        right: 15px;
-    }
-    
-    #rag-chat-header {
-        padding: 15px;
-    }
-    
-    #rag-chat-messages {
-        padding: 15px;
-    }
-    
-    .rag-message {
-        max-width: 90%;
-        font-size: 15px;
-    }
-    
-    #rag-chat-input-area {
-        padding: 12px;
-    }
-}
-
-/* ----- ANIMACIÓN DE CARGA INICIAL ----- */
-.rag-message.bot:first-child {
-    background: linear-gradient(135deg, #f8fafc, #e2e8f0);
-    border-left-color: #0055a4;
-    font-style: normal;
+    margin: 3px 0;
 }
 
 /* ----- SCROLL PERSONALIZADO ----- */
-#rag-chat-messages::-webkit-scrollbar {
-    width: 6px;
-}
+#rag-chat-messages::-webkit-scrollbar { width: 5px; }
+#rag-chat-messages::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 10px; }
+#rag-chat-messages::-webkit-scrollbar-thumb { background: var(--pbt-dark-sec); border-radius: 10px; }
 
-#rag-chat-messages::-webkit-scrollbar-track {
-    background: #e2e8f0;
-    border-radius: 10px;
-}
-
-#rag-chat-messages::-webkit-scrollbar-thumb {
-    background: #0055a4;
-    border-radius: 10px;
-}
-
-#rag-chat-messages::-webkit-scrollbar-thumb:hover {
-    background: #003366;
+/* ----- RESPONSIVE (MÓVILES) ----- */
+@media (max-width: 480px) {
+    #rag-chat-widget { left: 15px; bottom: 15px; }
+    #rag-chat-window {
+        width: 100vw;
+        height: 100vh;
+        bottom: -15px;
+        left: -15px;
+        border-radius: 0;
+        position: fixed;
+    }
+    .rag-chat-tooltip { display: none; }
+    #rag-chat-messages { padding: 10px; }
 }
