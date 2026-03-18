@@ -2,7 +2,7 @@
 /**
  * Plugin Name: RAG Chat para PBTechnologies
  * Description: Sistema RAG con Firecrawl para consultas inteligentes
- * Version: 3.0.0
+ * Version: 1.0.0
  */
 
 if (!defined('ABSPATH')) exit;
