@@ -38,6 +38,3 @@ El sistema busca información relevante en la base de conocimiento.
 
 El modelo genera una respuesta basada en esos datos.
 
-Firecrawl API Key	
-fc-fad88746e4a54310895878bea735fde9
-
