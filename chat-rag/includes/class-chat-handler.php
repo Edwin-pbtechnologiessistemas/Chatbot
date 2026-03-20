@@ -34,32 +34,57 @@ class ChatRAG_Chat_Handler {
     $question_normalized = $this->normalizeText($question_lower);
     
     // =============================================
-    // PASO 1: Verificar si es PREGUNTA DE PRODUCTO
+    // PASO 1: DETECTAR SI QUIERE PRODUCTOS DE UNA MARCA
+    // =============================================
+    if (preg_match('/productos? (de|de la) ([a-zA-Z]+)/i', $question, $matches) || 
+        preg_match('/dame (productos? )?de ([a-zA-Z]+)/i', $question, $matches) ||
+        preg_match('/que productos? tienen? (de )?([a-zA-Z]+)/i', $question, $matches)) {
+        
+        $marca = isset($matches[2]) ? $matches[2] : (isset($matches[1]) ? $matches[1] : '');
+        $marca = $this->normalizeText($marca);
+        
+        // Buscar productos de esa marca
+        $productos_marca = $this->searchProductsByBrand($marca);
+        
+        if (!empty($productos_marca)) {
+            return $this->formatProductList($productos_marca, "Productos de " . strtoupper($marca));
+        }
+    }
+    
+    // =============================================
+    // PASO 2: DETECTAR SI QUIERE PRODUCTOS ALEATORIOS
+    // =============================================
+    if (preg_match('/dame (otros |algunos |)(productos?|opciones)/i', $question) ||
+        preg_match('/muéstrame (otros |algunos |)(productos?|opciones)/i', $question) ||
+        strpos($question_normalized, 'otros productos') !== false) {
+        
+        $productos_aleatorios = $this->getRandomProducts(8);
+        return $this->formatProductList($productos_aleatorios, "Algunos productos que pueden interesarte");
+    }
+    
+    // =============================================
+    // PASO 3: VERIFICAR SI ES PREGUNTA DE PRODUCTO
     // =============================================
     $es_producto = $this->esPreguntaDeProducto($question);
     
     if ($es_producto) {
-        // Buscar productos primero
         $product_results = $this->searchProductsIntelligent($question);
         
         if (!empty($product_results)) {
-            // Verificar si hay un match muy específico
             $exact_match = $this->findExactProductMatch($product_results, $question);
             
             if ($exact_match) {
-                // Si es muy específico (tiene modelo), mostrar producto único
                 if (preg_match('/\d+[a-zA-Z]?[-]?\d*[a-zA-Z]?/', $question)) {
                     return $this->formatSingleProduct($exact_match);
                 }
             }
             
-            // Si no, mostrar lista
             return $this->formatProductResponse($product_results, $question);
         }
     }
     
     // =============================================
-    // PASO 2: DETECTAR INTENCIÓN DE EMPRESA
+    // PASO 4: DETECTAR INTENCIÓN DE EMPRESA
     // =============================================
     $intent = $this->detectIntent($question_lower);
     
@@ -71,7 +96,7 @@ class ChatRAG_Chat_Handler {
     }
     
     // =============================================
-    // PASO 3: CASO ESPECIAL PARA MARCAS
+    // PASO 5: CASO ESPECIAL PARA MARCAS (solo si no es búsqueda de productos)
     // =============================================
     if ($intent === 'marcas' && !$es_producto) {
         $company_results = $this->searchCompanyIntelligent('marcas', 'marcas');
@@ -81,7 +106,7 @@ class ChatRAG_Chat_Handler {
     }
     
     // =============================================
-    // PASO 4: BÚSQUEDA GENERAL DE PRODUCTOS
+    // PASO 6: BÚSQUEDA GENERAL DE PRODUCTOS
     // =============================================
     $product_results = $this->searchProductsIntelligent($question);
     if (!empty($product_results)) {
@@ -89,9 +114,78 @@ class ChatRAG_Chat_Handler {
     }
     
     // =============================================
-    // PASO 5: FALLBACK
+    // PASO 7: FALLBACK CON PRODUCTOS ALEATORIOS
     // =============================================
-    return $this->smartFallback($question, $intent);
+    $productos_aleatorios = $this->getRandomProducts(5);
+    $response = "🤔 No encontré resultados exactos para \"$question\"\n\n";
+    $response .= "**Mientras tanto, te muestro algunos productos que pueden interesarte:**\n\n";
+    $response .= $this->formatSimpleProductList($productos_aleatorios);
+    
+    return $response;
+}
+
+private function searchProductsByBrand($marca) {
+    global $wpdb;
+    $tables = $this->database->getTables();
+    
+    $marca_normalized = $this->normalizeText($marca);
+    
+    // Buscar en la columna brand
+    $results = $wpdb->get_results($wpdb->prepare(
+        "SELECT * FROM {$tables['products']} 
+         WHERE LOWER(brand) LIKE %s 
+         ORDER BY product_name ASC",
+        '%' . $wpdb->esc_like($marca_normalized) . '%'
+    ));
+    
+    // Si no encuentra, buscar en keywords también
+    if (empty($results)) {
+        $results = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM {$tables['products']} 
+             WHERE LOWER(keywords) LIKE %s 
+             ORDER BY product_name ASC",
+            '%' . $wpdb->esc_like($marca_normalized) . '%'
+        ));
+    }
+    
+    return $results;
+}
+
+/**
+ * Obtener productos aleatorios
+ */
+private function getRandomProducts($limit = 8) {
+    global $wpdb;
+    $tables = $this->database->getTables();
+    
+    return $wpdb->get_results(
+        "SELECT * FROM {$tables['products']} 
+         ORDER BY RAND() 
+         LIMIT $limit"
+    );
+}
+
+/**
+ * Formato simple para lista de productos (sin descripción larga)
+ */
+private function formatSimpleProductList($products) {
+    $response = "";
+    $count = 0;
+    
+    foreach ($products as $p) {
+        if ($count >= 5) break;
+        
+        $response .= "• **{$p->product_name}**\n";
+        $response .= "  {$p->short_description}\n";
+        $response .= "  ⚡ Marca: {$p->brand}";
+        if (!empty($p->price) && $p->price != 'Consultar') {
+            $response .= " | 💰 {$p->price}";
+        }
+        $response .= "\n\n";
+        $count++;
+    }
+    
+    return $response;
 }
 
 /**
@@ -132,52 +226,65 @@ private function isSpecificProductQuery($question) {
  */
 private function findExactProductMatch($products, $question) {
     $question_normalized = $this->normalizeText($question);
+    $question_normalizado_nombre = $this->normalizarNombreProducto($question_normalized);
+    
     $best_match = null;
     $best_score = 0;
     
     foreach ($products as $p) {
         $name_normalized = $this->normalizeText($p->product_name);
+        $name_normalizado_nombre = $this->normalizarNombreProducto($name_normalized);
         
-        // Coincidencia exacta
-        if ($name_normalized === $question_normalized) {
-            $p->relevance = 1000;
-            return $p;
+        $score = 0;
+        
+        // Coincidencia exacta con nombre normalizado
+        if ($name_normalizado_nombre === $question_normalizado_nombre) {
+            $score += 1000;
         }
-        
         // El nombre contiene la pregunta completa
-        if (strpos($name_normalized, $question_normalized) !== false) {
-            $score = 500;
-            if ($score > $best_score) {
-                $best_score = $score;
-                $best_match = $p;
-            }
+        elseif (strpos($name_normalizado_nombre, $question_normalizado_nombre) !== false) {
+            $score += 500;
         }
-        
         // La pregunta contiene el nombre completo
-        if (strpos($question_normalized, $name_normalized) !== false) {
-            $score = 400;
-            if ($score > $best_score) {
-                $best_score = $score;
-                $best_match = $p;
-            }
+        elseif (strpos($question_normalizado_nombre, $name_normalizado_nombre) !== false) {
+            $score += 400;
         }
         
-        // Coincidencia de modelo (números y letras)
-        preg_match('/([a-zA-Z]+)[\s-]*(\d+)/', $question_normalized, $q_model);
-        preg_match('/([a-zA-Z]+)[\s-]*(\d+)/', $name_normalized, $p_model);
+        // Coincidencia de modelo (ej: pags 10 125)
+        preg_match_all('/([a-zA-Z]+)\s*(\d+)\s*(\d*)/', $question_normalizado_nombre, $q_model);
+        preg_match_all('/([a-zA-Z]+)\s*(\d+)\s*(\d*)/', $name_normalizado_nombre, $p_model);
         
-        if (!empty($q_model) && !empty($p_model)) {
-            if ($q_model[1] === $p_model[1] && $q_model[2] === $p_model[2]) {
-                $score = 600;
-                if ($score > $best_score) {
-                    $best_score = $score;
-                    $best_match = $p;
+        if (!empty($q_model[0]) && !empty($p_model[0])) {
+            if (isset($q_model[1][0]) && isset($p_model[1][0]) && 
+                $q_model[1][0] === $p_model[1][0]) {
+                $score += 300;
+                
+                // Comparar números
+                if (isset($q_model[2][0]) && isset($p_model[2][0]) && 
+                    $q_model[2][0] == $p_model[2][0]) {
+                    $score += 300;
                 }
             }
         }
+        
+        // Coincidencia de palabras
+        $question_words = explode(' ', $question_normalizado_nombre);
+        $name_words = explode(' ', $name_normalizado_nombre);
+        $matches = array_intersect($question_words, $name_words);
+        $score += count($matches) * 50;
+        
+        if ($score > $best_score) {
+            $best_score = $score;
+            $best_match = $p;
+        }
     }
     
-    return $best_match;
+    // Si la puntuación es alta, devolver el match
+    if ($best_score > 200) {
+        return $best_match;
+    }
+    
+    return null;
 }
     /**
  * Detectar si la pregunta es sobre un producto específico
@@ -186,11 +293,21 @@ private function esPreguntaDeProducto($question) {
     $question_lower = strtolower($question);
     $question_normalized = $this->normalizeText($question_lower);
     
-    // Palabras que indican que es un producto
-    $palabras_producto = ['camara', 'termografica', 'taladro', 'alcoholimetro', 'registrador', 'analizador', 'multimetro', 'pinza', 'medidor', 'detector', 'comprobador'];
+    // Palabras que indican que es un producto (incluyendo plurales)
+    $palabras_producto = [
+        'camara', 'termografica', 'taladro', 'alcoholimetro', 'registrador', 
+        'analizador', 'multimetro', 'pinza', 'medidor', 'detector', 
+        'comprobador', 'pirometro', 'termometro', 'osciloscopio', 'frecuencimetro'
+    ];
     
     foreach ($palabras_producto as $palabra) {
         if (strpos($question_normalized, $palabra) !== false) {
+            return true;
+        }
+        
+        // También buscar plurales
+        $plural = $palabra . 's';
+        if (strpos($question_normalized, $plural) !== false) {
             return true;
         }
     }
@@ -202,8 +319,25 @@ private function esPreguntaDeProducto($question) {
     
     return false;
 }
+private function normalizarNombreProducto($texto) {
+    // Convertir a minúsculas
+    $texto = strtolower($texto);
+    
+    // Normalizar espacios alrededor de números
+    $texto = preg_replace('/(\d+)\s*-\s*(\d+)/', '$1-$2', $texto);
+    $texto = preg_replace('/([a-zA-Z])\s*(\d+)/', '$1 $2', $texto);
+    $texto = preg_replace('/(\d+)\s*([a-zA-Z])/', '$1 $2', $texto);
+    
+    // Eliminar espacios extras
+    $texto = preg_replace('/\s+/', ' ', $texto);
+    
+    return trim($texto);
+}
     /**
  * Búsqueda inteligente de productos con múltiples estrategias
+ */
+/**
+ * Búsqueda inteligente de productos
  */
 private function searchProductsIntelligent($question) {
     global $wpdb;
@@ -211,10 +345,15 @@ private function searchProductsIntelligent($question) {
     
     // Normalizar la pregunta
     $question_normalized = $this->normalizeText($question);
+    $question_normalizado_nombre = $this->normalizarNombreProducto($question_normalized);
+    $question_words = explode(' ', $question_normalizado_nombre);
+    $question_words = array_filter($question_words, function($w) { 
+        return strlen($w) > 2; 
+    });
 
     error_log("=== BÚSQUEDA ===");
     error_log("Pregunta original: " . $question);
-    error_log("Pregunta normalizada: " . $question_normalized);
+    error_log("Pregunta normalizada: " . $question_normalizado_nombre);
     
     // Obtener TODOS los productos
     $all_products = $wpdb->get_results("SELECT * FROM {$tables['products']}");
@@ -222,34 +361,57 @@ private function searchProductsIntelligent($question) {
     $scored_products = [];
     
     foreach ($all_products as $p) {
-    $name_normalized = $this->normalizeText($p->product_name);
-    
-    // Si la pregunta normalizada está en el nombre normalizado
-    if (strpos($name_normalized, $question_normalized) !== false) {
-        $p->relevance = 100;
-        $scored_products[] = $p;
-    }
-    // O si el nombre normalizado está en la pregunta
-    elseif (strpos($question_normalized, $name_normalized) !== false) {
-        $p->relevance = 80;
-        $scored_products[] = $p;
-    }
-    // Coincidencia de palabras
-    else {
-        $question_words = explode(' ', $question_normalized);
-        $name_words = explode(' ', $name_normalized);
+        $name_normalized = $this->normalizeText($p->product_name);
+        $name_normalizado_nombre = $this->normalizarNombreProducto($name_normalized);
+        
+        $score = 0;
+        
+        // Coincidencia exacta
+        if ($name_normalizado_nombre === $question_normalizado_nombre) {
+            $score += 1000;
+        }
+        // El nombre contiene la pregunta
+        elseif (strpos($name_normalizado_nombre, $question_normalizado_nombre) !== false) {
+            $score += 500;
+        }
+        // La pregunta contiene el nombre
+        elseif (strpos($question_normalizado_nombre, $name_normalizado_nombre) !== false) {
+            $score += 300;
+        }
+        
+        // Coincidencia de palabras
+        $name_words = explode(' ', $name_normalizado_nombre);
         $matches = array_intersect($question_words, $name_words);
-        if (count($matches) > 0) {
-            $p->relevance = count($matches) * 10;
+        $score += count($matches) * 100;
+        
+        // Coincidencia de modelo (ej: pags 10 125)
+        preg_match_all('/([a-zA-Z]+)\s*(\d+)\s*(\d*)/', $question_normalizado_nombre, $q_model);
+        preg_match_all('/([a-zA-Z]+)\s*(\d+)\s*(\d*)/', $name_normalizado_nombre, $p_model);
+        
+        if (!empty($q_model[0]) && !empty($p_model[0])) {
+            if (isset($q_model[1][0]) && isset($p_model[1][0]) && 
+                $q_model[1][0] === $p_model[1][0]) {
+                $score += 200;
+                
+                if (isset($q_model[2][0]) && isset($p_model[2][0]) && 
+                    $q_model[2][0] == $p_model[2][0]) {
+                    $score += 200;
+                }
+            }
+        }
+        
+        if ($score > 10) {
+            $p->relevance = $score;
             $scored_products[] = $p;
         }
     }
-}
     
     // Ordenar por relevancia
     usort($scored_products, function($a, $b) {
         return $b->relevance - $a->relevance;
     });
+    
+    error_log("Top resultados: " . count($scored_products));
     
     return array_slice($scored_products, 0, 15);
 }
@@ -310,15 +472,6 @@ private function searchProductsIntelligent($question) {
         return 'producto';
     }
     
-    /**
- * Normalizar texto: quitar tildes, caracteres especiales y normalizar
- */
-/**
- * Normalizar texto: SOLO quitar tildes, nada más
- */
-/**
- * Normalizar texto: quitar tildes correctamente
- */
 private function normalizeText($text) {
     if (empty($text)) return '';
     
@@ -333,21 +486,44 @@ private function normalizeText($text) {
         'â' => 'a', 'ê' => 'e', 'î' => 'i', 'ô' => 'o', 'û' => 'u',
         'ã' => 'a', 'õ' => 'o', 'ñ' => 'n', 'ç' => 'c',
         'ÿ' => 'y',
-        // Versiones mayúsculas (por si acaso)
-        'Á' => 'a', 'É' => 'e', 'Í' => 'i', 'Ó' => 'o', 'Ú' => 'u',
-        'À' => 'a', 'È' => 'e', 'Ì' => 'i', 'Ò' => 'o', 'Ù' => 'u',
-        'Ä' => 'a', 'Ë' => 'e', 'Ï' => 'i', 'Ö' => 'o', 'Ü' => 'u',
-        'Â' => 'a', 'Ê' => 'e', 'Î' => 'i', 'Ô' => 'o', 'Û' => 'u',
-        'Ã' => 'a', 'Õ' => 'o', 'Ñ' => 'n', 'Ç' => 'c'
+        'Á' => 'a', 'É' => 'e', 'Í' => 'i', 'Ó' => 'o', 'Ú' => 'u'
     ];
     
-    // Reemplazar cada tilde
+    // Reemplazar tildes
     foreach ($tildes as $tilde => $sin_tilde) {
         $text = str_replace($tilde, $sin_tilde, $text);
     }
     
-    // Eliminar cualquier otro carácter extraño que pueda quedar
-    $text = preg_replace('/[^a-z0-9\s\-]/', '', $text);
+    // =============================================
+    // NORMALIZAR PLURALES Y VARIANTES COMUNES
+    // =============================================
+    $plurales = [
+        'pirometros' => 'pirometro',
+        'pirometros' => 'pirometro',
+        'termometros' => 'termometro',
+        'taladros' => 'taladro',
+        'camaras' => 'camara',
+        'camáras' => 'camara',
+        'termograficas' => 'termografica',
+        'termográficas' => 'termografica',
+        'alcoholimetros' => 'alcoholimetro',
+        'alcoholímetros' => 'alcoholimetro',
+        'registradores' => 'registrador',
+        'analizadores' => 'analizador',
+        'multimetros' => 'multimetro',
+        'multímetros' => 'multimetro',
+        'pinzas' => 'pinza',
+        'medidores' => 'medidor',
+        'detectores' => 'detector',
+        'comprobadores' => 'comprobador'
+    ];
+    
+    foreach ($plurales as $plural => $singular) {
+        $text = str_replace($plural, $singular, $text);
+    }
+    
+    // Eliminar caracteres especiales pero mantener letras, números y espacios
+    $text = preg_replace('/[^a-z0-9\s]/', '', $text);
     
     // Eliminar espacios extras
     $text = preg_replace('/\s+/', ' ', $text);
