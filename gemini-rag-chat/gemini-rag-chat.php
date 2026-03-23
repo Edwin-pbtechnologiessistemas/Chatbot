@@ -11,7 +11,7 @@ require_once plugin_dir_path(__FILE__) . 'class-database.php';
 
 class Gemini_RAG_Plugin {
     private $db;
-    private $api_key = 'AIzaSyAoaSfF1q-eSXCUQJQD430RBMI5bRxCmEg'; 
+    private $api_key = '-'; 
 
     public function __construct() {
         $this->db = new ChatRAG_Database();
